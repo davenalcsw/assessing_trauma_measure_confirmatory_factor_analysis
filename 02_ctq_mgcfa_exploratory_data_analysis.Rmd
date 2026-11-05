@@ -1,0 +1,285 @@
+---
+title: "APS 2026 CTQ-SF Multigroup Confirmatory Factor Analysis Exploratory Data Analysis"
+date: "`December 3, 2025`"
+output: html_document
+---
+
+# Project Setup
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+```{r Install Packages}
+# If packages aren't installed use install.packages("package name") to install them before loading them
+```
+
+```{r Load Libraries }
+
+library(tidyverse) # contains functions for visualizing, manipulating, and and organizing data
+library (summarytools) #for dfsummary() which outputs a table that allows quick inspection of distribution, central tendency, skewness, and kurtosis for each variable
+library(ggThemeAssist) # quick way to edit graphs
+
+```
+
+# Data
+
+## Import Data
+
+```{r Import Data}
+clean_data <-read_csv("data/processed/clean_CTQ_SEM_data.csv")
+
+```
+
+# Exploratory Data Analysis
+
+## Univariate
+
+```{r summary of each variable}
+
+# view variable name, type, min/mean/median/max, IQR, frequency, small graph of distribution, # valid, and # missing
+dfSummary(clean_data)
+
+```
+
+From the table, I can see that:
+
+-   Racial groups are roughly equal in size
+-   Items that need to be reverse coded have been coded so that higher values indicate exposure to maltreatment
+-   Sample was mostly freshman and sophomore
+-   Sample was overwhelmingly female
+-   Distribution is as expected with most responses indicating low exposure
+-   Missing data is coded as missing, is minimal, and does not need to be removed
+
+## Bivariate
+
+```{r summary of each variable by race}
+
+# view variable name, type, min/mean/median/max, IQR, frequency, small graph of distribution, # valid, and # missing
+
+clean_data |>  
+  group_by(Race) |> 
+dfSummary()
+ 
+
+```
+
+From these tables, responses to each item appear to be similar between the two groups but it's difficult to see. I'll visualize demographic variables and a couple of the CTQ items grouped by race.
+
+### Data Visualization
+
+#### Histogram: Age Distribution by Race
+
+```{r age distribution by race histogram}
+
+age_by_race_histogram <- ggplot(clean_data, aes(x = Age, fill =Race)) +
+    geom_histogram() +
+    facet_wrap(vars(Race)) +
+    theme_minimal()+
+    theme(plot.title = element_text(face = "bold"),
+      legend.position = "none",
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()) +
+    labs(title = "There was a Slight Difference In Age Between Black and White Participants") +
+  scale_fill_viridis_d(option = "D", end = .5)
+
+
+```
+
+```{r save age x race histogram}
+
+ggsave("figures/age_race_histogram.png",age_by_race_histogram,
+       width = 8, height = 5, units = "in")
+
+ggsave("figures/age_race_histogram.pdf",age_by_race_histogram,
+       width = 8, height = 5, units = "in")
+```
+
+#### Bar Chart: Racial Distribution by College Year
+
+```{r college year by race bar chart 1}
+
+# try wrapping by race
+  
+clean_data |>
+  mutate(cyear = factor(College_Year, levels=c("freshman", "sophomore", "junior", "senior", "postbac", "other", "NA"))) |> 
+  ggplot( aes(x = cyear, fill =Race)) +
+      geom_bar() +
+      #scale_x_discrete(limits = rev) +
+      #coord_flip() +
+      facet_wrap(vars(Race), ncol=2, strip.position = "right") +
+      theme_minimal()+
+      theme(
+            plot.title = element_text(face = "bold"),
+            legend.position = "none", 
+            panel.grid.minor = element_blank()) +
+      labs(title = "Class Year by Race", x = "College Year") +
+    scale_fill_viridis_d(option = "A", end = .5)
+
+```
+
+```{r college year by race bar chart 2}
+
+# try wrapping by college year
+
+college_year_race_bar_chart <- clean_data |> 
+  filter(College_Year != "NA") |> 
+  mutate(cyear = factor(College_Year, levels=c("freshman", "sophomore", "junior", "senior", "posbac", "other"))) |> 
+  ggplot(aes(x = Race, fill =cyear)) +
+      geom_bar() +
+      facet_wrap(vars(cyear), nrow=1, strip.position = "bottom")+ 
+      theme_minimal()+
+      theme(plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "grey90", fill = NA),
+        strip.background = element_rect(fill = "grey95", color = NA)) +
+      labs(title = "Black Participants More Likely to be Juniors or Seniors",
+           subtitle = "White Participants More Likely to be Freshman or Sophomores",
+           x = NULL) +
+    scale_fill_viridis_d(option = "D", end = .5)
+
+```
+
+```{r save age x race histogram}
+
+ggsave("figures/college_year_race_bar_plot.png",college_year_race_bar_chart,
+       width = 8, height = 5, units = "in")
+
+ggsave("figures/college_year_race_bar_plot.pdf",college_year_race_bar_chart,
+       width = 8, height = 5, units = "in")
+```
+
+#### Boxplots: CTQ Items by Race
+
+##### Punished with a Hard Object
+
+```{r hit by object distribution}
+
+punished_boxplot <- ggplot(clean_data, aes(x = PA3hitobject, y = Race , fill = Race)) +
+  geom_boxplot()+
+   theme_minimal()+
+      theme(plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "grey90", fill = NA),
+        strip.background = element_rect(fill = "grey95", color = NA)) +
+      labs(title = "There Was a Slight Difference in Participant Report of Punishment with an Object by Race",
+           x = NULL,
+           y = "Punished with Belt or Other Object") +
+    scale_fill_viridis_d(option = "C", begin = .4, end = .9)
+
+```
+
+```{r save hit object boxplot}
+
+ggsave("figures/hit_object_boxplot.png",punished_boxplot,
+       width = 8, height = 5, units = "in")
+
+ggsave("figures/hit_object_boxplot.pdf",punished_boxplot,
+       width = 8, height = 5, units = "in")
+
+```
+
+##### Family Support
+
+```{r family source of strength and support}
+fam_sup_boxplot <- ggplot(clean_data, aes(x = EN5famsup, y = Race, fill = Race)) +
+  geom_boxplot()+
+   theme_minimal()+
+      theme(plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        panel.grid.minor = element_blank()) +
+      labs(title = "There was No Difference in Participant Report of Family Support by Race",
+           x = NULL,
+           y = "Family Source of Strength and Support (reverse coded)") +
+    scale_fill_viridis_d(option = "turbo", alpha = .75)
+
+```
+
+```{r save family support boxplot}
+
+ggsave("figures/fam_support_boxplot.png",fam_sup_boxplot,
+       width = 8, height = 5, units = "in")
+
+ggsave("figures/fam_support_boxplot.pdf",fam_sup_boxplot,
+       width = 8, height = 5, units = "in")
+```
+
+#### GGpairs Plot
+
+GGpairs offers a quick way to visualize the relationship between two variables. Best for a few variables. Will use CTQ total score instead of including all 25 CTQ item.
+
+```{r Create CTQ total score}
+
+# create new data set with new CTQ total score variable
+clean_data_2 <- clean_data |> 
+# performs function across rows
+  rowwise() |> 
+# add variable to data set
+  mutate(ctq_total = sum(c_across(PN1eat: EN5famsup))) 
+
+```
+
+```{r Create GGpair plot}
+
+ggpairs_plot <- clean_data_2|> 
+  select(Age, Sex, Race, College_Year, ctq_total) |> 
+  ggpairs() +
+  theme_minimal()
+
+
+```
+
+```{r save gg pairs plot}
+
+ggsave("figures/ggpairs_plot.png",ggpairs_plot,
+       width = 8, height = 5, units = "in")
+
+ggsave("figures/ggpairs_plot.pdf",ggpairs_plot,
+       width = 8, height = 5, units = "in")
+```
+
+
+#### Correlation 
+
+```{r correlation plot}
+
+# creates correlation matrix but output isn't great for sharing
+cTQ_items_correlation <-clean_data |> 
+  select(PN1eat: EN5famsup) |> 
+  lavCor(ordered = T)
+
+# create correlation plot
+  cTQ_item_corr_plot <-corrplot (cTQ_items_correlation)
+
+```
+
+
+```{r save correlation plot}
+
+ggsave("figures/ctq_corr_plot.png",cTQ_item_corr_plot,
+       width = 8, height = 5, units = "in")
+
+ggsave("figures/ctq_corr_plot.pdf",cTQ_item_corr_plot,
+       width = 8, height = 5, units = "in")
+```
+
+
+```{r create correlation table }
+
+# create table that can be used to sort correlations and find min and max values
+cor_long <- cTQ_items_correlation %>% 
+  as.data.frame() %>% # create correlation matrix (wide)
+  rownames_to_column("var1") %>%
+  pivot_longer(-var1, names_to = "var2", values_to = "cor")  %>% #transform table to long
+  filter(var1 != var2)        # remove diagonal
+
+
+```
+
+
+The lowest correlation is between "I knew that there was someone to take care of me and protect me" and "I was punished with a belt, a board, a cord, or some other hard object" (.1).
+The highest correlation is between "Someone molested me" and "I believe that I was sexually abused" (.94).
