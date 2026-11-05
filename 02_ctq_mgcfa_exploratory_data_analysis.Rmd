@@ -257,14 +257,18 @@ cTQ_items_correlation <-clean_data |>
 
 ```
 
+Tried to save using ggsave but received an error. Entered the above code into Claude and was given the following:
 
 ```{r save correlation plot}
 
-ggsave("figures/ctq_corr_plot.png",cTQ_item_corr_plot,
-       width = 8, height = 5, units = "in")
+# need to use this to save since corrplot does not return a plot
 
-ggsave("figures/ctq_corr_plot.pdf",cTQ_item_corr_plot,
-       width = 8, height = 5, units = "in")
+png("figures/cTQ_item_correlations.png", width = 3000, height = 3000, res = 300)
+corrplot(cTQ_items_correlation,
+         tl.cex = 0.6,      # shrink labels so many items fit
+         tl.col = "black")
+dev.off() 
+
 ```
 
 
