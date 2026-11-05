@@ -1,0 +1,205 @@
+---
+title: "APS 2026 CTQ-SF Multigroup Confirmatory Factor Analysis Data Preparation"
+author: "Davena Mgbeokwere"
+date: "`December 3, 2025`"
+output: html_document
+---
+
+# Project Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+
+```{r Install Packages}
+# If packages aren't installed use install.packages("package name") to install them before loading them
+```
+
+
+```{r Load Libraries }
+
+library(haven) # used to read SPSS files
+library(tidyverse) # contains several functions for preparing data
+library (summarytools) #for dfsummary() which provides summary of for all variables selected
+
+```
+
+# Data
+
+## Import Data
+
+```{r Import Data}
+
+raw_data <-read_sav("data/2012_ders_raw.sav") # import raw data
+
+```
+
+
+## View Data 
+
+```{r}
+
+View (raw_data)  
+```
+
+
+## Data Preparation
+
+To prepare the data for analysis, I need to do the following: 
+
+- remove columns that I will not be using
+- rename the questionnaire items
+- remove the # at the end
+- re-code the demographic variables 
+- remove participants who do not identify as Black or White 
+
+I typically use a single function like the one below:
+
+```{r Data Cleaning and Wrangling}
+
+
+cleaned_dataset_1 <- raw_data %>% 
+                select (ID:College_Year, eat = "CTQ1#", takecare="CTQ2#",
+                        callednames="CTQ3#", drunkorhigh="CTQ4#", special="CTQ5#",
+                        dirtyclothes="CTQ6#",loved="CTQ7#",wasntborn="CTQ8#",hithard="CTQ9#", 
+                        bruises="CTQ10#", punished="CTQ11#", helpfulfam="CTQ12#", insults="CTQ13#",
+                        phyabused="CTQ14#", beaten="CTQ15#", hated="CTQ16#", closefam="CTQ17#",
+                        sextouch="CTQ18#", sexthreat="CTQ19#", sexdo="CTQ20#", molest="CTQ21#",
+                        emotabused="CTQ22#", doctor="CTQ23#",sexabused="CTQ24#", famsup="CTQ25#") %>%
+#Re-code the levels for each factor/categorical variable
+                mutate(Sex = fct_recode(as.factor(Sex), Male = "1", Female = "2"), 
+                        Ethnicity = fct_recode(as.factor(Ethnicity), NH = "1", Hisp = "2"),
+                        Race = fct_recode(as.factor(Race), NatAmer = "1", Asian = "2", 
+                                          Black = "3", NatHaw_PacIsl = "4",
+                                          White = "5", Bi_Multiracial = "6", Other = "7"),
+                        race_2 = fct_recode(as.factor(race_2), NatAmer = "1", Asian = "2", 
+                                           Black = "3", NatHaw_PacIsl = "4",
+                                          White = "5", Bi_Multiracial = "6", 
+                                          Other = "7", Lat_Hisp = "8"),
+                       College_Year = fct_recode(as.factor(College_Year), freshman ="1", 
+                                                 sophomore ="2", junior = "3", senior = "4", 
+                                                 posbac ="5", other = "6"),
+#Change the decimal places displayed to 2 decimal places
+                        Age = format(round(Age, 2), nsmall = 2))
+                       
+
+
+```
+
+
+However, that isn't the most readable for others. Below is code for each step of the data preparation process for this project.
+
+```{r Remove #}
+
+# remove "#" at the end of column names
+clean_data_1 <- raw_data |> 
+                  rename_with( ~ gsub("#", "", .x))
+```
+
+
+```{r Remove Columns}
+
+# keep demographic and CTQ measurement variables
+clean_data_2 <- clean_data_1|> 
+                  select (ID:Race,
+                        College_Year,
+                        CTQ1:CTQ9,
+                        CTQ11:CTQ15,
+                        CTQ17:CTQ21,
+                        CTQ23:CTQ28) 
+```
+
+
+```{r Select Participants}
+
+#Keep participants who select Black or White for their race. 
+
+#Race coding:
+# Native American = "1", Asian = "2", Black = "3", NatHaw_PacIsl = "4",
+# White = "5", Bi_Multiracial = "6", Other = "7"
+
+#Keep rows where race is Black or White
+clean_data_3 <- clean_data_2 |> 
+                  filter (Race == 3 | Race == 5
+                          )
+
+```
+
+
+```{r Rename the CTQ variables}
+
+# renamed CTQ variables/columns to match with measurement items
+clean_data_4 <- clean_data_3 |> 
+                  rename (
+                    PN1eat = 'CTQ1',
+                    PN2careprotect = 'CTQ2',
+                    EA1calledthings = 'CTQ3',
+                    PN3drunkhigh = 'CTQ4',
+                    EN1specimp = 'CTQ5',
+                    PN4dirtyclothes = 'CTQ6',
+                    EN2loved = 'CTQ7',
+                    EA2wasntborn = 'CTQ8',
+                    PA1hitdoctor = 'CTQ9',
+                    PA2bruises = 'CTQ11',
+                    PA3hitobject = 'CTQ12',
+                    EN3helpfulfam = 'CTQ13',
+                    EA3insults = 'CTQ14',
+                    PA4phyabused = 'CTQ15',
+                    PA5hitnoticed = 'CTQ17',
+                    EA4felthated = 'CTQ18',
+                    EN4closefam = 'CTQ19',
+                    SA1sextouch = 'CTQ20',
+                    SA2sexthreat = 'CTQ21',
+                    SA3sexdowatch = 'CTQ23',
+                    SA4molest = 'CTQ24',
+                    EA5emotabuse = 'CTQ25',
+                    PN5doctor = 'CTQ26',
+                    SA5sexabuse = 'CTQ27',
+                    EN5famsup = 'CTQ28'
+                  )
+
+```
+
+```{r Re-code categorical variables}
+
+
+clean_data_5 <- clean_data_4 |> 
+                    mutate (ID = as.character(ID),
+                      Sex = fct_recode(as.factor(Sex), male = "1", female = "2"),
+                      Ethnicity = fct_recode(as.factor(Ethnicity), NH = "1", Hisp = "2"),
+                      Race = fct_recode(as.factor(Race), Black = "3", White = "5"),
+                      College_Year = fct_recode(
+                        as.factor(College_Year),
+                        freshman = "1",
+                        sophomore = "2",
+                        junior = "3",
+                        senior = "4",
+                        posbac = "5",
+                        other = "6"
+                      ))
+
+```
+
+
+```{r Change Age Decimals}
+
+cleaned_data_6 <- clean_data_5 |> 
+                    mutate (Age = format(round(Age, 0), nsmall = 0)) 
+```
+
+
+```{r}
+
+View (cleaned_dataset_6)  
+```
+
+
+```{r Save Cleaned Dataset}
+
+write_csv(cleaned_data_6, "data/processed/clean_CTQ_SEM_data.csv")
+
+```
+
+
+
