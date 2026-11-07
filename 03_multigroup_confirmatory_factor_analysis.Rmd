@@ -1,0 +1,390 @@
+---
+title: "Step 3: Multigroup Confirmatory Factor Analysis"
+date: "12.03.25"
+---
+# Project Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Install and Load Libraries 
+
+```{r Install Packages}
+# If packages aren't installed use install.packages("package name") to install them before loading them
+```
+
+
+```{r Load Libraries}
+
+library(tidyverse) # contains several functions for cleaning data
+library(lavaan) # package for running SEM
+library (knitr)# create fit statistics table
+
+#---------------------------------------------
+# library (forcats)
+# library(psych)
+# library(semPlot)
+# library(semTable)
+# library(corx)
+# library(tidySEM)
+# library (lavaanPlot)
+```
+
+# Data
+
+## Import Data
+
+```{r Import Data}
+
+clean_data <-read_csv("data/processed/clean_CTQ_SEM_data.csv")
+
+```
+
+
+# Analysis
+
+## Original and Alternative Models 
+
+The original model(Bernstein et al., 2003) has five items for each dimension. 
+
+```{r create original model}
+
+original_model <- 'sexabuse  =~ SA1sextouch + SA2sexthreat + SA3sexdowatch + SA4molest + SA5sexabuse
+                      emotabuse =~ EA1calledthings + EA2wasntborn + EA3insults + EA4felthated + EA5emotabuse
+                      physicalabuse =~ PA1hitdoctor + PA2bruises + PA3hitobject + PA4phyabused + PA5hitnoticed
+                      physicalneg =~ PN1eat + PN2careprotect+ PN3drunkhigh + PN4dirtyclothes + PN5doctor    
+                      emotneg =~ EN1specimp + EN2loved + EN3helpfulfam + EN4closefam + EN5famsup'
+
+```
+
+The alternative model(Gerdner & Allgulander,2009) shifts two items from physical to emotional neglect.
+
+```{r create alternative model}
+
+
+alternative_model <- 'sexabuse  =~  SA1sextouch + SA2sexthreat + SA3sexdowatch + SA4molest + SA5sexabuse
+                    emotabuse =~ EA1calledthings + EA2wasntborn + EA3insults + EA4felthated + EA5emotabuse
+                    physicalabuse =~ PA1hitdoctor + PA2bruises + PA3hitobject + PA4phyabused + PA5hitnoticed 
+                    emotneg =~ EN1specimp + EN2loved + EN3helpfulfam + EN4closefam + EN5famsup + PN2careprotect + PN5doctor
+                    physicalneg =~ PN1eat + PN3drunkhigh + PN4dirtyclothes'
+
+
+```
+
+## Multi-Group Confirmatory Factor Analysis (MGCFA)
+
+### MGCFA - Original Model
+
+#### Step 1: Test the Whole Model
+
+Question: Does the factor structure/measurement model work?
+
+```{r unrestricted-original model-entire sample}
+
+overall_original_fit <- cfa (model = original_model, 
+     data = clean_data, 
+# set meanstructure = T so that all models are the same
+     meanstructure = T,
+     ordered = T)
+
+summary (overall_original_fit, standardized = T, fit.measure = T)
+
+```
+
+Do they work within each group?
+
+```{r unrestricted-original model-White}
+
+white_original_fit <- cfa (model = original_model, 
+     data = CFA_data[CFA_data$Race == "White", ], 
+     meanstructure = T,
+     ordered = T)
+
+summary (white_original_fit, standardized = T, fit.measure = T)
+
+```
+
+
+```{r unrestricted-original model-Black}
+
+black_original_fit <- cfa (model = original_model, 
+     data = CFA_data[CFA_data$Race == "Black", ], 
+     meanstructure = T,
+     ordered = T)
+
+summary (black_original_fit, standardized = T, fit.measure = T)
+
+```
+
+
+#### Step 2: Test for Configural Invariance
+
+Does the factor structure work the same across groups?
+
+
+```{r unrestricted-layer two separate models}
+
+configural_original_fit <- cfa (model = original_model, 
+     data = clean_data, 
+     meanstructure = T, 
+     group = "Race",
+     ordered = T)
+
+summary (configural_original_fit, standardized = T, fit.measure = T)
+
+```
+
+
+#### Step 3: Test for Metric Invariance
+
+
+Are the factor loadings the same? In order words, do the individual items group together in the same way across groups.
+
+
+```{r Restrict loadings/estimates}
+
+metric_original_fit <- cfa (model = original_model, 
+     data = clean_data, 
+     meanstructure = T,
+     ordered = T,
+     group = "Race", 
+     group.equal = c("loadings"))
+
+summary(metric_original_fit, standardized = T, fit.measure = T)
+
+```
+
+#### Step 4: Test for Scalar Invariance
+
+Are the item intercepts the same? In other words, are the means of the latent variables the same across groups?
+
+
+```{r restrict the intercepts}
+
+scalar_original_fit <- cfa (model = original_model, 
+     data = clean_data, 
+     meanstructure = T, 
+     ordered = T,
+     group = "Race", 
+     group.equal = c("loadings", "intercepts"))
+
+summary(scalar_original_fit, standardized = T, fit.measure = T)
+
+```
+
+#### Step 5: Test for Strict/Error Invariance
+
+are the item residuals the same? In other words, are the confidence intervals similar?
+
+
+```{r restrict the error variances}
+
+strict_original_fit <- cfa (model = original_model, 
+     data = clean_data, 
+     meanstructure = T, 
+     ordered = T,
+     group = "Race", 
+     group.equal = c("loadings", "intercepts", "residuals"))
+
+summary(strict_original_fit, standardized = T, fit.measure = T)
+
+```
+
+#### Step 6: Create the Output
+
+Tips for creating this table came from https://www.youtube.com/watch?v=Kt2lZxcAGWs&list=PLVtFgtzwI3cp2PcxxtEvh0wQ91IU2UwJm&index=3 
+
+```{r Create Table for Original Model}
+
+table_fit_original <- matrix(NA, nrow = 9, ncol = 5)
+colnames(table_fit_original) = c("Model", "X2", "df", "CFI", "RMSEA")
+table_fit_original[1, ] <- c ("Overall Original", round (fitmeasures(overall_original_fit, 
+                                            c("chisq", "df", "cfi", "rmsea")), 3))
+
+table_fit_original[2, ] <- c ("White Original", round (fitmeasures(white_original_fit, 
+                                             c("chisq", "df", "cfi", "rmsea")), 3))
+
+table_fit_original[3, ] <- c ("Black Original", round (fitmeasures(black_original_fit, 
+                                             c("chisq", "df", "cfi", "rmsea")), 3))
+
+table_fit_original[4, ] <- c ("Config Original", round (fitmeasures(configural_original_fit, 
+                                             c("chisq", "df", "cfi", "rmsea")), 3))
+
+
+table_fit_original[5, ] <- c ("Metric Original", round (fitmeasures(metric_original_fit, 
+                                           c("chisq", "df", "cfi", "rmsea")), 3))
+
+
+table_fit_original[6, ] <- c ("Scalar Original", round (fitmeasures(scalar_original_fit, 
+                                            c("chisq", "df", "cfi", "rmsea")), 3))
+
+
+table_fit_original[7, ] <- c ("Strict Original", round (fitmeasures(strict_original_fit, 
+                                            c("chisq", "df", "cfi", "rmsea")), 3))
+                                            
+kable (table_fit_original)
+
+```
+
+
+
+### MGCFA - Alternative Model
+
+#### Step 1: Test the Whole Model
+
+Question: Does the factor structure/measurement model work?
+
+```{r}
+
+overall_alternative_fit <- cfa (model = AlternativeModel, 
+     data = clean_data, 
+     meanstructure = T,
+     ordered = T)
+
+summary (overall_alternative_fit, standardized = T, fit.measure = T)
+
+```
+
+
+Check for White participants
+
+```{r}
+
+white_alternative_fit <- cfa (model = AlternativeModel, 
+     data = CFA_data[CFA_data$Race == "White", ], 
+     meanstructure = T,
+     ordered = T)
+
+summary (white_alternative_fit, standardized = T, fit.measure = T)
+
+```
+
+
+Check for Black participants
+
+```{r}
+
+black_alternative_fit <- cfa (model = AlternativeModel, 
+     data = CFA_data[CFA_data$Race == "Black", ], 
+     meanstructure = T,
+     ordered = T)
+
+summary (black_alternative_fit, standardized = T, fit.measure = T)
+
+```
+
+
+
+
+#### Step 2: Test for Configural Invariance
+
+Does the factor structure work the same across groups?
+
+
+```{r}
+
+configural_alternative_fit <- cfa (model = AlternativeModel, 
+     data = clean_data, 
+     meanstructure = T, 
+     group = "Race",
+     ordered = T)
+
+summary (configural_alternative_fit, standardized = T, fit.measure = T)
+
+```
+
+
+#### Step 3: Test for Metric Invariance
+
+Are the factor loadings the same? In order words, do the individual items group together in the same way across groups.
+
+
+```{r}
+
+metric_alternative_fit <- cfa (model = AlternativeModel, 
+     data = clean_data, 
+     meanstructure = T,
+     ordered = T,
+     group = "Race",
+     group.equal = c("loadings"))
+
+summary (metric_alternative_fit, standardized = T, fit.measure = T)
+
+```
+
+
+#### Step 4: Test for Scalar Invariance
+
+Are the item intercepts the same? In other words, are the means of the latent variables the same across groups? 
+
+```{r}
+
+scalar_alternative_fit <- cfa (model = AlternativeModel, 
+     data = clean_data, 
+     meanstructure = T, 
+     ordered = T,
+     group = "Race",
+     group.equal = c("loadings", "intercepts"))
+
+summary(scalar_alternative_fit, standardized = T, fit.measure = T)
+
+```
+
+#### Step 5: Test for Strict/Error Invariance
+
+are the item residuals the same? In other words, are the confidence intervals similar?
+
+```{r}
+
+strict_alternative_fit <- cfa (model = AlternativeModel, 
+     data = clean_data, 
+     meanstructure = T, 
+     ordered = T,
+     group = "Race",
+     group.equal = c("loadings", "intercepts", "residuals"))
+
+summary(strict_alternative_fit, standardized = T, fit.measure = T)
+
+```
+
+#### Step 6: Create the Output
+
+```{r Alternative Model Fit Indices Table}
+
+table_fit_alternative <- matrix(NA, nrow = 9, ncol = 5)
+colnames(table_fit_alternative) = c("Model", "X2", "df", "CFI", "RMSEA")
+table_fit_alternative[1, ] <- c ("Overall Alternative", round (fitmeasures(overall_alternative_fit, 
+                                            c("chisq", "df", "cfi", "rmsea")), 3))
+
+table_fit_alternative[2, ] <- c ("White Alternative", round (fitmeasures(white_alternative_fit, 
+                                             c("chisq", "df", "cfi", "rmsea")), 3))
+
+table_fit_alternative[3, ] <- c ("Black Alternative", round (fitmeasures(black_alternative_fit, 
+                                             c("chisq", "df", "cfi", "rmsea")), 3))
+
+table_fit_alternative[4, ] <- c ("Config Alternative", round (fitmeasures(configural_alternative_fit, 
+                                             c("chisq", "df", "cfi", "rmsea")), 3))
+
+
+table_fit_alternative[5, ] <- c ("Metric Alternative", round (fitmeasures(metric_alternative_fit, 
+                                           c("chisq", "df", "cfi", "rmsea")), 3))
+
+
+table_fit_alternative[6, ] <- c ("Scalar Alternative", round (fitmeasures(scalar_alternative_fit, 
+                                            c("chisq", "df", "cfi", "rmsea")), 3))
+
+
+table_fit_alternative[7, ] <- c ("Strict Alternative", round (fitmeasures(strict_alternative_fit, 
+                                            c("chisq", "df", "cfi", "rmsea")), 3))
+                                            
+kable (table_fit_alternative)
+
+```
+
+
+
+
+
+
+
