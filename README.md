@@ -36,10 +36,7 @@
 
 ## 1. Project Overview
 
-Healthcare relies on patient-reported data to identify high risk groups
-and make decisions about treatment. Maltreatment has been consistently
-linked to adverse health outcomes but it remains unclear which measure
-is best for assessing maltreatment. This project explored survey data
+Healthcare organizations rely on patient-reported data to identify high risk groups. Maltreatment increases risk for adverse health outcomes--making the selection of a childhood maltreatment measure that accurately captures exposure and is valid across groups important. This project explored survey data
 completed by undergraduate students to determine whether an alternative
 version of the Childhood Trauma Questionnaire-Short Form (CTQ-SF)
 outperformed the original version using multigroup confirmatory factor
